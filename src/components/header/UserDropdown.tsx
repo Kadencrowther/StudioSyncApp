@@ -2,9 +2,50 @@ import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router";
+import { useAuthStore } from "../../store/useAuthStore";
+import { useUserStore } from "../../store/useUserStore";
+
+type Role = 'DirectorInstructor' | 'Director' | 'Owner' | 'Admin' | 'Instructor' | 'Student' | 'Parent';
+
+// Simplified to always return grey color scheme
+const getRoleColor = () => ({
+  bg: 'bg-gray-100 dark:bg-gray-800/50',
+  text: 'text-gray-700 dark:text-gray-300'
+});
+
+interface InitialsAvatarProps {
+  firstName: string;
+  lastName: string;
+}
+
+const InitialsAvatar = ({ firstName, lastName }: InitialsAvatarProps) => {
+  const initials = `${firstName[0]}${lastName[0]}`.toUpperCase();
+  return (
+    <div className="flex items-center justify-center w-11 h-11 rounded-full bg-brand-100 dark:bg-brand-900/30 transition-all duration-300 hover:scale-105 hover:bg-brand-200 dark:hover:bg-brand-800/40 cursor-pointer">
+      <span className="text-lg font-medium text-brand-700 dark:text-brand-300">
+        {initials}
+      </span>
+    </div>
+  );
+};
+
+interface RolePillProps {
+  role: string;
+}
+
+const RolePill = ({ role }: RolePillProps) => {
+  const roleStyle = getRoleColor();
+  return (
+    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${roleStyle.bg} ${roleStyle.text} transition-all duration-300 hover:scale-105 cursor-default hover:bg-gray-200 dark:hover:bg-gray-700/50`}>
+      {role}
+    </span>
+  );
+};
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const { loading: authLoading, signOut } = useAuthStore();
+  const { userData, currentStudio, loading: userLoading } = useUserStore();
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
@@ -13,21 +54,81 @@ export default function UserDropdown() {
   function closeDropdown() {
     setIsOpen(false);
   }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      closeDropdown();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const loading = authLoading || userLoading;
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-11 h-11 rounded-full bg-gray-200 animate-pulse dark:bg-gray-700"></div>
+        <div className="w-20 h-5 bg-gray-200 rounded animate-pulse dark:bg-gray-700"></div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <Link
+        to="/signin"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+      >
+        Sign In
+      </Link>
+    );
+  }
+
+  // Handle roles parsing with type checking
+  const getRoles = (roleData: any): string[] => {
+    if (!roleData) return ['User'];
+    
+    if (Array.isArray(roleData)) {
+      return roleData.map(role => String(role).trim());
+    }
+    
+    if (typeof roleData === 'string') {
+      return roleData.split(/[/,]/).map(role => role.trim()).filter(Boolean);
+    }
+    
+    // If it's an object or other type, try to convert to string
+    return [String(roleData).trim()];
+  };
+
+  const roles = getRoles(userData.Role);
+
   return (
     <div className="relative">
       <button
         onClick={toggleDropdown}
-        className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
+        className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400 group"
       >
-        <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <img src="/images/user/owner.jpg" alt="User" />
+        <span className="mr-3">
+          {userData.PhotoURL ? (
+            <img 
+              src={userData.PhotoURL} 
+              alt={`${userData.FirstName} ${userData.LastName}`}
+              className="w-11 h-11 rounded-full transition-all duration-300 group-hover:scale-105 group-hover:ring-2 group-hover:ring-brand-300 dark:group-hover:ring-brand-700"
+            />
+          ) : (
+            <InitialsAvatar firstName={userData.FirstName} lastName={userData.LastName} />
+          )}
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">Musharof</span>
+        <span className="block mr-1 font-medium text-theme-sm transition-colors duration-300 group-hover:text-brand-600 dark:group-hover:text-brand-400">
+          {userData.FirstName}
+        </span>
         <svg
-          className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
+          className={`stroke-gray-500 dark:stroke-gray-400 transition-all duration-300 ${
             isOpen ? "rotate-180" : ""
-          }`}
+          } group-hover:stroke-brand-600 dark:group-hover:stroke-brand-400`}
           width="18"
           height="20"
           viewBox="0 0 18 20"
@@ -47,23 +148,30 @@ export default function UserDropdown() {
       <Dropdown
         isOpen={isOpen}
         onClose={closeDropdown}
-        className="absolute right-0 mt-[17px] flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
+        className="absolute right-0 mt-[17px] flex w-[280px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-theme-lg dark:border-gray-800 dark:bg-gray-dark"
       >
-        <div>
-          <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            Musharof Chowdhury
-          </span>
-          <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            randomuser@pimjo.com
-          </span>
+        <div className="space-y-3">
+          <div>
+            <span className="block text-base font-medium text-gray-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 cursor-pointer transition-colors duration-300">
+              {`${userData.FirstName} ${userData.LastName}`}
+            </span>
+            <span className="block text-sm text-gray-500 dark:text-gray-400">
+              {userData.Email}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {roles.map((role: string, index: number) => (
+              <RolePill key={index} role={role} />
+            ))}
+          </div>
         </div>
 
-        <ul className="flex flex-col gap-1 pt-4 pb-3 border-b border-gray-200 dark:border-gray-800">
+        <ul className="flex flex-col gap-1 pt-4 pb-3 mt-3 border-t border-gray-200 dark:border-gray-800">
           <li>
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
-              to="/profile"
+              to={`/profile/${currentStudio}/${userData.Uid}`}
               className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
@@ -88,7 +196,7 @@ export default function UserDropdown() {
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
-              to="/profile"
+              to={`/profile/${currentStudio}/${userData.Uid}`}
               className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
@@ -113,7 +221,7 @@ export default function UserDropdown() {
             <DropdownItem
               onItemClick={closeDropdown}
               tag="a"
-              to="/profile"
+              to={`/support/${currentStudio}/${userData.Uid}`}
               className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
             >
               <svg
@@ -135,8 +243,8 @@ export default function UserDropdown() {
             </DropdownItem>
           </li>
         </ul>
-        <Link
-          to="/signin"
+        <button
+          onClick={handleSignOut}
           className="flex items-center gap-3 px-3 py-2 mt-3 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-300"
         >
           <svg
@@ -155,7 +263,7 @@ export default function UserDropdown() {
             />
           </svg>
           Sign out
-        </Link>
+        </button>
       </Dropdown>
     </div>
   );

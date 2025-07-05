@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
+import Logo from "../components/Logo";
 
 // Assume these icons are imported from an icon library
 import {
@@ -16,7 +17,7 @@ import {
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import SidebarWidget from "./SidebarWidget";
+import PoweredByStudioSync from "./PoweredByStudioSync";
 
 type NavItem = {
   name: string;
@@ -29,7 +30,7 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    path: "/",
   },
   {
     icon: <CalenderIcon />,
@@ -38,26 +39,48 @@ const navItems: NavItem[] = [
   },
   {
     icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
+    name: "Classes",
+    path: "/classes",
   },
   {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+    icon: <UserCircleIcon />,
+    name: "Students",
+    path: "/students",
   },
   {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
+    icon: <UserCircleIcon />,
+    name: "Families",
+    path: "/families",
   },
   {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
+    icon: <UserCircleIcon />,
+    name: "Instructors",
+    path: "/instructors",
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Charges & Payments",
+    path: "/payments",
+  },
+  {
+    icon: <PlugInIcon />,
+    name: "Studio Store",
+    path: "/store",
+  },
+  {
+    icon: <GridIcon />,
+    name: "Performance",
+    path: "/performance",
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Reports",
+    path: "/reports",
+  },
+  {
+    icon: <PlugInIcon />,
+    name: "Settings",
+    path: "/settings",
   },
 ];
 
@@ -304,31 +327,10 @@ const AppSidebar: React.FC = () => {
         }`}
       >
         <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <img
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-              <img
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-            </>
-          ) : (
-            <img
-              src="/images/logo/logo-icon.svg"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
-          )}
+          <Logo 
+            isMinimized={!isExpanded && !isHovered && !isMobileOpen} 
+            isDarkMode={false} 
+          />
         </Link>
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
@@ -368,7 +370,7 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        {isExpanded || isHovered || isMobileOpen ? <PoweredByStudioSync /> : null}
       </div>
     </aside>
   );

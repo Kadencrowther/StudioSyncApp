@@ -1,39 +1,44 @@
-import EcommerceMetrics from "../../components/ecommerce/EcommerceMetrics";
-import MonthlySalesChart from "../../components/ecommerce/MonthlySalesChart";
-import StatisticsChart from "../../components/ecommerce/StatisticsChart";
-import MonthlyTarget from "../../components/ecommerce/MonthlyTarget";
-import RecentOrders from "../../components/ecommerce/RecentOrders";
-import DemographicCard from "../../components/ecommerce/DemographicCard";
 import PageMeta from "../../components/common/PageMeta";
+import UpcomingClasses from "../../components/studio/UpcomingClasses";
+import StudioAnnouncements from "../../components/studio/StudioAnnouncements";
+import StudioCapacity from "../../components/studio/StudioCapacity";
+import StudioMetrics from "../../components/studio/StudioMetrics";
 
 export default function Home() {
   return (
     <>
       <PageMeta
-        title="React.js Ecommerce Dashboard | TailAdmin - React.js Admin Dashboard Template"
-        description="This is React.js Ecommerce Dashboard page for TailAdmin - React.js Tailwind CSS Admin Dashboard Template"
+        title="Studio Dashboard | Studio Sync"
+        description="Studio Sync Dashboard - Manage your dance studio efficiently"
       />
+      
+      {/* Top Row - Capacity and Metrics */}
+      <div className="grid grid-cols-12 gap-4 md:gap-6 mb-6">
+        {/* Studio Capacity Chart - Left Side */}
+        <div className="col-span-12 xl:col-span-4">
+          <div className="h-full flex flex-col">
+            <StudioCapacity />
+          </div>
+        </div>
+
+        {/* Studio Metrics Cards - Right Side */}
+        <div className="col-span-12 xl:col-span-8">
+          <div className="h-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <StudioMetrics />
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row - Upcoming Classes */}
       <div className="grid grid-cols-12 gap-4 md:gap-6">
-        <div className="col-span-12 space-y-6 xl:col-span-7">
-          <EcommerceMetrics />
-
-          <MonthlySalesChart />
-        </div>
-
-        <div className="col-span-12 xl:col-span-5">
-          <MonthlyTarget />
-        </div>
-
+        {/* Upcoming Classes - Full Width */}
         <div className="col-span-12">
-          <StatisticsChart />
+          <UpcomingClasses />
         </div>
 
-        <div className="col-span-12 xl:col-span-5">
-          <DemographicCard />
-        </div>
-
-        <div className="col-span-12 xl:col-span-7">
-          <RecentOrders />
+        {/* Studio Announcements - Full Width */}
+        <div className="col-span-12">
+          <StudioAnnouncements />
         </div>
       </div>
     </>
