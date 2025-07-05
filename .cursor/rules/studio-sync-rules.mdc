@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+For Studio Sync App we will use React Typscript and the architcture must be extremely Clean modern modularized componentized code, It should always follow professional modern architecture practices
+
+All Files should be 400 lines of code MAX 400 or less always
+
+All database CRUD operations for this are in PascalCase

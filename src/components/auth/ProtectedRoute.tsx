@@ -1,28 +1,30 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUserStore } from '../../store/useUserStore';
+import { useEffect } from 'react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const navigate = useNavigate();
-  const { user, loading } = useAuthStore();
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { user } = useAuthStore();
+  const { currentStudio, currentUserDoc } = useUserStore();
+  const location = useLocation();
+  const { studioId, userId } = useParams();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/signin');
+    // If we're already authenticated but missing URL parameters, redirect to the full URL
+    if (user && currentStudio && currentUserDoc && (!studioId || !userId)) {
+      const baseUrl = location.pathname === '/' ? '' : location.pathname;
+      const fullUrl = `${baseUrl}/${currentStudio}/${currentUserDoc.id}${location.search}`;
+      window.history.replaceState(null, '', fullUrl);
     }
-  }, [user, loading, navigate]);
+  }, [user, currentStudio, currentUserDoc, location, studioId, userId]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-4 border-brand-500 rounded-full animate-spin border-t-transparent"></div>
-      </div>
-    );
+  if (!user) {
+    return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  return user ? <>{children}</> : null;
-}; 
+  return <>{children}</>;
+} 

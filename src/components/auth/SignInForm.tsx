@@ -1,29 +1,78 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
-import Button from "../ui/button/Button";
 import { useAuthStore } from "../../store/useAuthStore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { auth, db } from "../../lib/firebase";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { useUserStore } from "../../store/useUserStore";
+
+interface StudioBranding {
+  studioName: string;
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+}
 
 export default function SignInForm() {
+  const { studioId } = useParams();
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [studioBranding, setStudioBranding] = useState<StudioBranding | null>(null);
   
+  const navigate = useNavigate();
   const { signIn, error, setError } = useAuthStore();
+
+  useEffect(() => {
+    const loadStudioBranding = async () => {
+      if (!studioId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const studioRef = doc(db, 'Studios', studioId);
+        const studioDoc = await getDoc(studioRef);
+
+        if (!studioDoc.exists()) {
+          setError('Studio not found');
+          setLoading(false);
+          return;
+        }
+
+        const data = studioDoc.data();
+        setStudioBranding({
+          studioName: data.StudioName || '',
+          logoUrl: data.LogoUrl || '',
+          primaryColor: data.PrimaryColor || '#36404e',
+          secondaryColor: data.SecondaryColor || '#c8b568'
+        });
+      } catch (error) {
+        setError('Failed to load studio information');
+      }
+      setLoading(false);
+    };
+
+    loadStudioBranding();
+  }, [studioId, setError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const success = await signIn(email, password);
+      const success = await signIn(email, password, studioId);
       if (success) {
-        navigate('/');
+        const { currentStudio, currentUserDoc } = useUserStore.getState();
+        if (currentStudio && currentUserDoc) {
+          navigate(`/${currentStudio}/${currentUserDoc.id}`);
+        } else {
+          navigate('/');
+        }
       }
     } catch (err) {
       console.error('Sign in error:', err);
@@ -34,36 +83,58 @@ export default function SignInForm() {
   const handleGoogleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      navigate('/');
+      const result = await signInWithPopup(auth, provider);
+      if (studioId) {
+        const usersRef = collection(db, `Studios/${studioId}/Users`);
+        const q = query(usersRef, where('Uid', '==', result.user.uid));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          setError('User not found in this studio');
+          return;
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        navigate(`/${studioId}/${userDoc.id}`);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Google sign in error:', err);
       setError((err as Error).message);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col flex-1">
+        <div className="flex items-center justify-center flex-1">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1">
-      <div className="w-full max-w-md pt-10 mx-auto">
-        <Link
-          to="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon className="size-5" />
-          Back to dashboard
-        </Link>
-      </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
-            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
-              Sign In
+            {studioBranding?.logoUrl && (
+              <img
+                src={studioBranding.logoUrl}
+                alt={`${studioBranding.studioName} logo`}
+                className="mx-auto h-16 w-auto mb-4"
+              />
+            )}
+            <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md text-center">
+              Sign In {studioBranding?.studioName ? `to ${studioBranding.studioName}` : ''}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
               Enter your email and password to sign in!
             </p>
             {error && (
-              <p className="mt-2 text-sm text-error-500">{error}</p>
+              <p className="mt-2 text-sm text-error-500 text-center">{error}</p>
             )}
           </div>
           <div>
@@ -162,7 +233,10 @@ export default function SignInForm() {
                 <div>
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg transition w-full px-4 py-3 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600 disabled:bg-brand-300"
+                    style={{
+                      backgroundColor: studioBranding?.primaryColor,
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg transition w-full px-4 py-3 text-sm text-white shadow-theme-xs hover:opacity-90 disabled:opacity-50"
                   >
                     Sign in
                   </button>

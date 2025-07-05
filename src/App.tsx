@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -18,49 +18,106 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
   return (
-    <>
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+    <Router>
+      <ScrollToTop />
+      <Routes>
+        {/* Auth Routes */}
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signin/:studioId" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signup/:studioId" element={<SignUp />} />
 
-            {/* Others Page */}
-            <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/blank" element={<Blank />} />
+        {/* Protected Dashboard Layout */}
+        <Route element={<AppLayout />}>
+          {/* Base routes that will be redirected to include studio/user */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/calendar" element={
+            <ProtectedRoute>
+              <Calendar />
+            </ProtectedRoute>
+          } />
 
-            {/* Forms */}
-            <Route path="/form-elements" element={<FormElements />} />
+          {/* Routes with studio and user context */}
+          <Route path="/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/calendar/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Calendar />
+            </ProtectedRoute>
+          } />
 
-            {/* Tables */}
-            <Route path="/basic-tables" element={<BasicTables />} />
+          {/* Other protected routes */}
+          <Route path="/profile/:studioId/:userId" element={
+            <ProtectedRoute>
+              <UserProfiles />
+            </ProtectedRoute>
+          } />
+          <Route path="/form-elements/:studioId/:userId" element={
+            <ProtectedRoute>
+              <FormElements />
+            </ProtectedRoute>
+          } />
+          <Route path="/basic-tables/:studioId/:userId" element={
+            <ProtectedRoute>
+              <BasicTables />
+            </ProtectedRoute>
+          } />
+          <Route path="/alerts/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Alerts />
+            </ProtectedRoute>
+          } />
+          <Route path="/avatars/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Avatars />
+            </ProtectedRoute>
+          } />
+          <Route path="/badge/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Badges />
+            </ProtectedRoute>
+          } />
+          <Route path="/buttons/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Buttons />
+            </ProtectedRoute>
+          } />
+          <Route path="/images/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Images />
+            </ProtectedRoute>
+          } />
+          <Route path="/videos/:studioId/:userId" element={
+            <ProtectedRoute>
+              <Videos />
+            </ProtectedRoute>
+          } />
+          <Route path="/line-chart/:studioId/:userId" element={
+            <ProtectedRoute>
+              <LineChart />
+            </ProtectedRoute>
+          } />
+          <Route path="/bar-chart/:studioId/:userId" element={
+            <ProtectedRoute>
+              <BarChart />
+            </ProtectedRoute>
+          } />
+        </Route>
 
-            {/* Ui Elements */}
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/badge" element={<Badges />} />
-            <Route path="/buttons" element={<Buttons />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/videos" element={<Videos />} />
-
-            {/* Charts */}
-            <Route path="/line-chart" element={<LineChart />} />
-            <Route path="/bar-chart" element={<BarChart />} />
-          </Route>
-
-          {/* Auth Layout */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-
-          {/* Fallback Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </>
+        {/* Fallback Route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
