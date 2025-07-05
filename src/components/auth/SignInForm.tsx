@@ -21,10 +21,13 @@ export default function SignInForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signIn(email, password);
-      navigate('/');
+      const success = await signIn(email, password);
+      if (success) {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Sign in error:', err);
+      setError((err as Error).message || 'Invalid email or password');
     }
   };
 

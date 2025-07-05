@@ -13,7 +13,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   setError: (error: string | null) => void;
@@ -24,15 +24,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
   error: null,
   
-  signIn: async (email: string, password: string) => {
+  signIn: async (email: string, password: string): Promise<boolean> => {
     try {
       set({ error: null });
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       set({ user: userCredential.user });
       // Fetch user data
       await useUserStore.getState().fetchUserData(userCredential.user.uid);
+      return true;
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
