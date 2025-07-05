@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, doc, getDoc, getDocs, query, where, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export interface StudioUser {

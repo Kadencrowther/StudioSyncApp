@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
+import { EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
@@ -8,7 +8,6 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { useUserStore } from "../../store/useUserStore";
 
 interface StudioBranding {
   studioName: string;
@@ -65,14 +64,30 @@ export default function SignInForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // First authenticate with Firebase
       const success = await signIn(email, password, studioId);
       if (success) {
-        const { currentStudio, currentUserDoc } = useUserStore.getState();
-        if (currentStudio && currentUserDoc) {
-          navigate(`/${currentStudio}/${currentUserDoc.id}`);
-        } else {
-          navigate('/');
+        // Get the current user's UID after successful authentication
+        const currentUser = auth.currentUser;
+        if (!currentUser || !studioId) {
+          setError('Authentication failed');
+          return;
         }
+
+        // Check if user exists in this studio's Users collection
+        const usersRef = collection(db, `Studios/${studioId}/Users`);
+        const q = query(usersRef, where('Uid', '==', currentUser.uid));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          setError('You do not have access to this studio');
+          // Sign out the user since they don't have access to this studio
+          await auth.signOut();
+          return;
+        }
+
+        const userDoc = querySnapshot.docs[0];
+        navigate(`/${studioId}/${userDoc.id}`);
       }
     } catch (err) {
       console.error('Sign in error:', err);

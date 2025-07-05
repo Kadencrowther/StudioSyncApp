@@ -8,3 +8,12 @@ For Studio Sync App we will use React Typscript and the architcture must be extr
 All Files should be 400 lines of code MAX 400 or less always
 
 All database CRUD operations for this are in PascalCase
+
+Necessary Best Practices to Follow
+
+✅ Single Responsibility Principle in components
+✅ Clear separation of concerns
+✅ Type-safe state management
+✅ Secure authentication flow
+✅ Modular component structure|
++ more modern practices
