@@ -5,8 +5,6 @@ import { Link } from "react-router";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useUserStore } from "../../store/useUserStore";
 
-type Role = 'DirectorInstructor' | 'Director' | 'Owner' | 'Admin' | 'Instructor' | 'Student' | 'Parent';
-
 // Simplified to always return grey color scheme
 const getRoleColor = () => ({
   bg: 'bg-gray-100 dark:bg-gray-800/50',

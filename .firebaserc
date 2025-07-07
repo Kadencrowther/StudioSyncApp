@@ -1,5 +1,21 @@
 {
   "projects": {
     "default": "studiosync-af73d"
-  }
+  },
+  "targets": {
+    "studiosync-af73d": {
+      "hosting": {
+        "production": [
+          "studiosync-af73d.web.app"
+        ],
+        "dev2": [
+          "dev2-studiosync-af73d"
+        ],
+        "dev1": [
+          "dev1-studiosync-af73d"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
