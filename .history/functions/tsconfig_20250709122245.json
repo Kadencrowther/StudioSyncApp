@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs", // CommonJS is better for Node.js functions
+    "target": "es2020", // More modern ES target
+    "outDir": "lib",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true, // Skip type checking for all declaration files (helps with 3rd party type issues)
+    "typeRoots": [
+      "./node_modules/@types" // Only include types from local node_modules, ignore parent folders
+    ]
+  },
+  "include": ["src"]
+}
