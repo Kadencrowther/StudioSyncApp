@@ -32,9 +32,9 @@ const SectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 const ClassDetailsModal: React.FC<ClassDetailsModalProps> = ({
   isOpen,
   onClose,
-  classData,
   onEdit,
-  onDelete
+  onDelete,
+  classData,
 }) => {
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [instructor, setInstructor] = useState<Instructor | null>(null);
@@ -239,12 +239,12 @@ const ClassDetailsModal: React.FC<ClassDetailsModalProps> = ({
                         <td className="px-4 py-3 text-sm text-right">
                           <Link
                             ref={linkRef}
-                            to={`/students/${currentStudio}/${currentUserDoc?.id}/${student.id}`}
+                            to={`/students/${currentStudio}/${currentUserDoc?.Uid}/${student.id}`}
                             className="hidden"
                           />
                           <button 
                             onClick={() => {
-                              if (currentStudio && currentUserDoc?.id) {
+                              if (currentStudio && currentUserDoc?.Uid) {
                                 onClose();
                                 setTimeout(() => {
                                   linkRef.current?.click();
@@ -404,7 +404,7 @@ const ClassDetailsModal: React.FC<ClassDetailsModalProps> = ({
         <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div className="flex gap-2">
             <button
-              onClick={() => onEdit(classData.id)}
+              onClick={() => onEdit(classData.ClassId)}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors rounded-lg border border-blue-200 hover:border-blue-300 dark:border-blue-900 dark:hover:border-blue-800"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -413,7 +413,7 @@ const ClassDetailsModal: React.FC<ClassDetailsModalProps> = ({
               Edit
             </button>
             <button
-              onClick={() => onDelete(classData.id)}
+              onClick={() => onDelete(classData.ClassId)}
               className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors rounded-lg border border-red-200 hover:border-red-300 dark:border-red-900 dark:hover:border-red-800"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

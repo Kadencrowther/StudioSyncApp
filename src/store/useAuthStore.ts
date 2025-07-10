@@ -4,10 +4,12 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  User,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { useUserStore } from './useUserStore';
+import { useUserStore, UserState } from './useUserStore';
 
 interface AuthState {
   user: User | null;
@@ -20,6 +22,11 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+// Type assertion for useUserStore.getState()
+const getUserStore = () => useUserStore.getState() as UserState;
+
+let authCheckPromise: Promise<void> | null = null;
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
@@ -28,21 +35,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email: string, password: string, studioId?: string): Promise<boolean> => {
     try {
       set({ error: null, loading: true });
+      console.log('🔐 Setting Firebase persistence to LOCAL...');
       
-      // First authenticate with Firebase
+      await setPersistence(auth, browserLocalPersistence);
+      console.log('✅ Browser persistence set successfully');
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('🔑 User authenticated with Firebase:', userCredential.user.email);
       
-      // If studioId is provided, check if user exists in that studio's Users collection
       if (studioId) {
-        await useUserStore.getState().fetchUserData(studioId, userCredential.user.uid);
+        console.log('🏢 Fetching user data for studio:', studioId);
+        await getUserStore().fetchUserData(studioId, userCredential.user.uid);
         set({ user: userCredential.user, loading: false });
+        console.log('✅ User data loaded for studio:', studioId);
         return true;
       }
 
-      // If no studioId provided, find all studios the user belongs to
-      const userStudios = await useUserStore.getState().findUserStudios(userCredential.user.uid);
+      console.log('🔍 Finding user studios...');
+      const userStudios = await getUserStore().findUserStudios(userCredential.user.uid);
+      console.log('📋 Found studios:', userStudios);
       
       if (userStudios.length === 0) {
+        console.error('❌ User not found in any studio');
         await firebaseSignOut(auth);
         set({ 
           error: 'User not found in any studio. Please contact your studio administrator.',
@@ -52,12 +66,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         return false;
       }
       
-      // Use the first studio if multiple exist
-      await useUserStore.getState().fetchUserData(userStudios[0], userCredential.user.uid);
+      console.log('🏢 Loading user data for studio:', userStudios[0]);
+      await getUserStore().fetchUserData(userStudios[0], userCredential.user.uid);
       set({ user: userCredential.user, loading: false });
+      console.log('✅ Sign in complete - User authenticated and data loaded');
       return true;
 
     } catch (error) {
+      console.error('❌ Sign in error:', error);
       set({ error: (error as Error).message, loading: false });
       return false;
     }
@@ -66,9 +82,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email: string, password: string, studioId: string, userData: any) => {
     try {
       set({ error: null, loading: true });
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('🔐 Setting up new user account...');
       
-      // Initialize studio-specific user data
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('✅ Firebase account created:', userCredential.user.email);
+      
       const newUserData = {
         ...userData,
         uid: userCredential.user.uid,
@@ -79,9 +97,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         updatedAt: new Date().toISOString()
       };
 
-      await useUserStore.getState().setUserData(newUserData);
+      console.log('💾 Saving user data to studio:', studioId);
+      await getUserStore().setUserData(newUserData);
       set({ user: userCredential.user, loading: false });
+      console.log('✅ Sign up complete - User created and data saved');
     } catch (error) {
+      console.error('❌ Sign up error:', error);
       set({ error: (error as Error).message, loading: false });
       throw error;
     }
@@ -89,10 +110,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     try {
+      console.log('🔒 Signing out user...');
       await firebaseSignOut(auth);
-      useUserStore.getState().clearUserData();
+      getUserStore().clearUserData();
       set({ user: null, loading: false, error: null });
+      console.log('✅ Sign out complete');
     } catch (error) {
+      console.error('❌ Sign out error:', error);
       set({ error: (error as Error).message, loading: false });
     }
   },
@@ -100,30 +124,63 @@ export const useAuthStore = create<AuthState>((set) => ({
   setError: (error: string | null) => set({ error }),
 
   checkAuth: async () => {
-    return new Promise<void>((resolve) => {
+    // If there's already an auth check in progress, return that promise
+    if (authCheckPromise) {
+      return authCheckPromise;
+    }
+
+    authCheckPromise = new Promise<void>((resolve) => {
+      console.log('🔄 Checking authentication state...');
+      
+      // Set persistence immediately
+      setPersistence(auth, browserLocalPersistence)
+        .then(() => console.log('✅ Browser persistence set during auth check'))
+        .catch(console.error);
+
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        set({ loading: true });
-        
-        if (user) {
-          // Find user's studios
-          const userStudios = await useUserStore.getState().findUserStudios(user.uid);
-          
-          if (userStudios.length > 0) {
-            // Load user data from the first studio they belong to
-            await useUserStore.getState().fetchUserData(userStudios[0], user.uid);
-            set({ user, loading: false });
+        try {
+          if (user) {
+            console.log('👤 Auth state restored. User:', user.email);
+            
+            // Load user data in parallel
+            const userStudiosPromise = getUserStore().findUserStudios(user.uid);
+            
+            // Set the user immediately while data loads
+            set({ user, loading: true });
+            
+            const userStudios = await userStudiosPromise;
+            console.log('📋 Found studios:', userStudios);
+            
+            if (userStudios.length > 0) {
+              await getUserStore().fetchUserData(userStudios[0], user.uid);
+              console.log('✅ Auth check complete - User authenticated and data loaded');
+            } else {
+              console.log('⚠️ User not found in any studio');
+              await firebaseSignOut(auth);
+              set({ user: null });
+            }
           } else {
-            set({ user: null, loading: false });
+            console.log('ℹ️ No authenticated user found');
+            getUserStore().clearUserData();
           }
-        } else {
-          useUserStore.getState().clearUserData();
-          set({ user: null, loading: false });
+        } catch (error) {
+          console.error('❌ Error during auth check:', error);
+          set({ user: null });
+        } finally {
+          set({ loading: false });
+          authCheckPromise = null;
+          resolve();
         }
-        
-        unsubscribe();
-        resolve();
       });
+
+      // Clean up the listener when the promise is resolved
+      return () => {
+        unsubscribe();
+        authCheckPromise = null;
+      };
     });
+
+    return authCheckPromise;
   }
 }));
 

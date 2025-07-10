@@ -8,25 +8,24 @@ interface TableActionsProps {
 
 const TableActions: React.FC<TableActionsProps> = ({ onEdit, onDelete }) => {
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex items-center justify-end space-x-1 min-w-[100px]">
       <button
-        onClick={onEdit}
-        className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
       >
         <PencilIcon className="h-4 w-4" />
-        <span>Edit</span>
       </button>
       <button
         onClick={(e) => {
           e.stopPropagation();
-          if (window.confirm('Are you sure you want to delete this class?')) {
-            onDelete();
-          }
+          onDelete();
         }}
-        className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+        className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
       >
         <TrashIcon className="h-4 w-4" />
-        <span>Delete</span>
       </button>
     </div>
   );

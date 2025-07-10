@@ -1,38 +1,69 @@
-import { Timestamp } from 'firebase/firestore';
-
 export type PaymentMethod = 'tuition' | 'onetime' | 'both' | undefined;
 
 // Base interface with common properties
-interface BaseClassData {
+export interface BaseClassData {
   ClassName: string;
   ClassType: 'Regular' | 'Workshop' | 'Private' | 'Competition';
-  Days: string[];
+  Description?: string;
+  InstructorId: string;
+  MaxSize: number;
+  MinAge?: number;
+  MaxAge?: number;
+  EnforceAgeLimit: boolean;
+  RoomId: string;
+  SeasonId: string;
   StartTime: string;
   EndTime: string;
-  MaxSize: number;
-  EnforceAgeLimit: boolean;
-  MinAge: number;
-  MaxAge: number;
-  Description: string;
-  InstructorId: string;
+  Days: string[];
+  Students?: string[];
   ClassStyleId: string;
-  SeasonId: string;
-  RoomId: string;
-  PaymentMethod: PaymentMethod;
+  PaymentMethod?: PaymentMethod;
   RatePlanId?: string;
   OneTimeFee?: number;
   StudioId?: string;
   CreatedAt?: string;
   UpdatedAt?: string;
-  Students: string[];
+  Fee?: Array<{ amount: number }>;
+  PaymentType?: string;
 }
 
 // Interface for existing classes (includes id)
 export interface ClassData extends BaseClassData {
-  id: string;
+  id: string; // Make id required since it always exists after fetching
+  ClassId: string; // Keep ClassId for backward compatibility
 }
 
-// Interface for new classes (id is optional)
-export interface NewClassData extends BaseClassData {
-  id?: string;
+// Interface for new classes (before they have an id)
+export interface NewClassData extends Omit<BaseClassData, 'id' | 'ClassId'> {
+  // Add any additional fields specific to new classes
+}
+
+// Type for the view dropdown props
+export interface ViewDropdownProps<T = string | string[]> {
+  onViewChange: (view: T) => void;
+  value: T;
+  options: Array<{
+    label: string;
+    value: string;
+    color?: string;
+  }>;
+  className?: string;
+  defaultLabel?: string;
+  isLoading?: boolean;
+  isMulti?: boolean;
+  allItemsLabel?: string;
+  icon?: React.ReactNode;
+}
+
+export interface CalendarViewSelectorProps {
+  currentView: string;
+  onViewChange: (view: string) => void;
+  className?: string;
+}
+
+export interface ClassFilters {
+  seasonId?: string;
+  roomId?: string;
+  instructorId?: string;
+  classType?: string;
 } 

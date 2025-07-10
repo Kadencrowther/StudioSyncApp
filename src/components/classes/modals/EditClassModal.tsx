@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../../ui/modal';
-import { NewClassData } from '../../../types/class.types';
+import { ClassData } from '../../../types/class.types';
 import { useUserStore } from '../../../store/useUserStore';
 import { classStyleService, ClassStyle } from '../../../services/classStyleService';
 import { seasonService, Season } from '../../../services/seasonService';
@@ -13,29 +13,61 @@ import { RatePlanSelector } from '../forms/RatePlanSelector';
 import { FeeInput } from '../forms/FeeInput';
 import { AgeRestrictionSection } from '../forms/AgeRestrictionSection';
 
-interface CreateClassModalProps {
+interface EditClassModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (classData: NewClassData) => Promise<void>;
-  initialStartTime?: string;
-  initialEndTime?: string;
-  initialDays?: string[];
+  onSubmit: (classId: string, classData: Partial<ClassData>) => Promise<void>;
+  classData: (ClassData & { id?: string; Fee?: Array<{ amount: number }> }) | null;
 }
 
-const CreateClassModal: React.FC<CreateClassModalProps> = ({
+// Add a type that includes all the fields we're actually using
+type FormDataType = Partial<ClassData> & {
+  id?: string;
+  Fee?: Array<{ amount: number }>;
+  PaymentType?: string;
+};
+
+const normalizeDays = (days: string[]): string[] => {
+  const dayMap: { [key: string]: string } = {
+    'mon': 'monday',
+    'tue': 'tuesday',
+    'wed': 'wednesday',
+    'thu': 'thursday',
+    'fri': 'friday',
+    'sat': 'saturday',
+    'sun': 'sunday',
+  };
+
+  return days.map(day => {
+    const lowerDay = day.toLowerCase();
+    return dayMap[lowerDay] || lowerDay;
+  });
+};
+
+const determinePaymentMethod = (classData: FormDataType): PaymentMethod => {
+  // Handle legacy data format
+  if (classData.PaymentType) {
+    if (classData.PaymentType === 'PayRate') return 'tuition';
+    if (classData.Fee && classData.Fee.length > 0) return 'onetime';
+    return 'tuition';
+  }
+  
+  // Handle new data format
+  return classData.PaymentMethod || 'tuition';
+};
+
+const EditClassModal: React.FC<EditClassModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  initialStartTime = '',
-  initialEndTime = '',
-  initialDays = []
+  classData: initialClassData
 }) => {
-  const [formData, setFormData] = useState<NewClassData>({
+  const [formData, setFormData] = useState<FormDataType>({
     ClassName: '',
     ClassType: 'Regular',
-    Days: initialDays,
-    StartTime: initialStartTime,
-    EndTime: initialEndTime,
+    Days: [],
+    StartTime: '',
+    EndTime: '',
     MaxSize: 20,
     EnforceAgeLimit: false,
     MinAge: 0,
@@ -48,20 +80,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
     PaymentMethod: undefined,
     RatePlanId: '',
     OneTimeFee: 0,
-    Students: [],
   });
-
-  // Update form data when initial values change
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(prev => ({
-        ...prev,
-        Days: initialDays,
-        StartTime: initialStartTime,
-        EndTime: initialEndTime
-      }));
-    }
-  }, [isOpen, initialStartTime, initialEndTime, initialDays]);
 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [classStyles, setClassStyles] = useState<ClassStyle[]>([]);
@@ -70,6 +89,27 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
   const [ratePlans, setRatePlans] = useState<RatePlan[]>([]);
   const [loading, setLoading] = useState(false);
   const currentStudio = useUserStore(state => state.currentStudio);
+
+  useEffect(() => {
+    if (initialClassData) {
+      const normalizedDays = normalizeDays(initialClassData.Days || []);
+      const paymentMethod = determinePaymentMethod(initialClassData);
+      
+      setFormData({
+        ...initialClassData,
+        Days: normalizedDays,
+        PaymentMethod: paymentMethod,
+        // Handle legacy fee data
+        OneTimeFee: initialClassData.Fee && initialClassData.Fee.length > 0 
+          ? initialClassData.Fee[0]?.amount || 0 
+          : initialClassData.OneTimeFee || 0,
+        // Ensure RatePlanId is set if using tuition
+        RatePlanId: paymentMethod === 'tuition' || paymentMethod === 'both' 
+          ? initialClassData.RatePlanId || '' 
+          : '',
+      });
+    }
+  }, [initialClassData]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -100,39 +140,21 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!initialClassData?.ClassId) return;
+    
     setLoading(true);
     try {
-      await onSubmit(formData);
+      await onSubmit(initialClassData.ClassId, formData);
       onClose();
-      setFormData({
-        ClassName: '',
-        ClassType: 'Regular',
-        Days: [],
-        StartTime: '',
-        EndTime: '',
-        MaxSize: 20,
-        EnforceAgeLimit: false,
-        MinAge: 0,
-        MaxAge: 99,
-        Description: '',
-        InstructorId: '',
-        ClassStyleId: '',
-        SeasonId: '',
-        RoomId: '',
-        PaymentMethod: undefined,
-        RatePlanId: '',
-        OneTimeFee: 0,
-        Students: [], // Reset students array
-      });
     } catch (error) {
-      console.error('Error creating class:', error);
+      console.error('Error updating class:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleInputChange = (
-    name: keyof NewClassData,
+    name: keyof FormDataType,
     value: string | number | boolean | string[] | PaymentMethod
   ) => {
     setFormData(prev => ({
@@ -145,8 +167,10 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
     name: string,
     value: string | number | string[]
   ) => {
-    handleInputChange(name as keyof NewClassData, value);
+    handleInputChange(name as keyof ClassData, value);
   };
+
+  if (!initialClassData) return null;
 
   return (
     <Modal
@@ -157,10 +181,10 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
       <form onSubmit={handleSubmit} className="space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto">
         <div>
           <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
-            Create New Class
+            Edit Class
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Fill in the details below to create a new class.
+            Update the class details below.
           </p>
         </div>
 
@@ -240,7 +264,7 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
             disabled={loading}
             className="px-4 py-2.5 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-400 dark:hover:bg-brand-500 transition-colors duration-200"
           >
-            {loading ? 'Creating...' : 'Create Class'}
+            {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
@@ -248,4 +272,4 @@ const CreateClassModal: React.FC<CreateClassModalProps> = ({
   );
 };
 
-export default CreateClassModal; 
+export default EditClassModal; 
